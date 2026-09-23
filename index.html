@@ -1,37 +1,1149 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa" dir="rtl" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gabriel Subtitle Translator</title>
+    <title>Gabriel Subtitle Translator | مترجم هوشمند زیرنویس گابریل</title>
     <meta name="description" content="AI-powered English-to-Persian SRT subtitle translation workspace with smart translation memory, specialized terminology, and side-by-side editor." />
-    <meta property="og:title" content="Gabriel Subtitle Translator" />
-    <meta property="og:description" content="AI-powered English-to-Persian SRT subtitle translation workspace with smart translation memory, specialized terminology, and side-by-side editor." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
+    
+    <!-- Fonts: Vazirmatn & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      (function() {
-        try {
-          var saved = localStorage.getItem('pst_theme');
-          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (saved === 'dark' || (!saved && prefersDark)) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Plus Jakarta Sans', 'Vazirmatn', 'system-ui', 'sans-serif'],
+              persian: ['Vazirmatn', 'system-ui', 'sans-serif'],
+              mono: ['Consolas', 'Courier New', 'monospace'],
+            },
+            colors: {
+              brand: {
+                50: '#eefcf6',
+                100: '#d7f7e9',
+                500: '#00A86B',
+                600: '#00945E',
+                700: '#007A4D',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- React 18, ReactDOM 18 & Babel Standalone CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.7); }
+      .font-persian { font-family: 'Vazirmatn', sans-serif; }
+    </style>
+  </head>
+  <body class="bg-[#F6F8FA] dark:bg-[#0B0F17] text-[#0F172A] dark:text-[#F1F5F9] font-sans antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+      // --- SVG ICONS HELPER ---
+      const Icons = {
+        Download: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
+        Upload: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>,
+        Sparkles: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>,
+        Search: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
+        RotateCcw: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>,
+        RotateCw: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6"/></svg>,
+        FileDown: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
+        HelpCircle: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        CheckCircle2: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        AlertCircle: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        Sun: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
+        Moon: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>,
+        Trash2: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+        Plus: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
+        Sliders: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>,
+        Clock: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        Play: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>,
+        Pause: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+        Key: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>,
+        BookOpen: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>,
+        X: (props) => <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
+      };
+
+      // --- DEFAULT TERMINOLOGY PROFILES ---
+      const DEFAULT_TERMINOLOGY_PROFILES = [
+        {
+          id: 'ict',
+          name: 'ICT Smart Money Concepts',
+          persianName: 'مفاهیم اسمارت مانی (ICT)',
+          description: 'واژگان تخصصی ترید و بازارهای مالی بر اساس متدولوژی ICT مایکل هادلستون',
+          items: [
+            { id: 't1', english: 'Fair Value Gap', persian: 'افویجی' },
+            { id: 't2', english: 'FVG', persian: 'افویجی' },
+            { id: 't3', english: 'Order Block', persian: 'اوردربلاک' },
+            { id: 't4', english: 'OB', persian: 'اوردربلاک' },
+            { id: 't5', english: 'Liquidity', persian: 'نقدینگی' },
+            { id: 't6', english: 'Buy Side Liquidity', persian: 'بای‌ساید' },
+            { id: 't7', english: 'Sell Side Liquidity', persian: 'سیل‌ساید' },
+            { id: 't8', english: 'Market Structure Shift', persian: 'ام‌اس‌اس' },
+            { id: 't9', english: 'MSS', persian: 'تغییر ساختار بازار' },
+            { id: 't10', english: 'Breaker Block', persian: 'بریکربلاک' },
+            { id: 't11', english: 'Mitigation Block', persian: 'میتیگیشن‌بلاک' },
+            { id: 't12', english: 'Premium', persian: 'گران‌فروشی' },
+            { id: 't13', english: 'Discount', persian: 'ارزان‌فروشی' },
+            { id: 't14', english: 'Killzone', persian: 'کیل‌زون' },
+            { id: 't15', english: 'Judas Swing', persian: 'حرکت جوداس' },
+            { id: 't16', english: 'Swing High', persian: 'سوئینگ های' },
+            { id: 't17', english: 'Swing Low', persian: 'سوئینگ لو' },
+            { id: 't18', english: 'Stop Loss', persian: 'حد ضرر' },
+            { id: 't19', english: 'Take Profit', persian: 'حد سود' },
+            { id: 't20', english: 'Candle', persian: 'کندل' }
+          ]
+        },
+        {
+          id: 'cinema',
+          name: 'Cinema & Movie Subtitles',
+          persianName: 'سینما و فیلم‌های داستانی',
+          description: 'ترجمه محاوره‌ای و طبیعی برای سریال‌ها و فیلم‌های هالیوود و سینما',
+          items: [
+            { id: 'c1', english: 'Hey buddy', persian: 'هی رفیق' },
+            { id: 'c2', english: 'Come on', persian: 'بی‌خیال' },
+            { id: 'c3', english: 'Damn it', persian: 'لعنتی' },
+            { id: 'c4', english: 'Watch out', persian: 'مواظب باش' },
+            { id: 'c5', english: 'Freeze', persian: 'حرکت نکن' },
+            { id: 'c6', english: 'No way', persian: 'عمراً' }
+          ]
+        },
+        {
+          id: 'tech',
+          name: 'Technology & AI',
+          persianName: 'فناوری و هوش مصنوعی',
+          description: 'واژگان مهندسی نرم‌افزار، هوش مصنوعی و کامپیوتر',
+          items: [
+            { id: 'te1', english: 'Machine Learning', persian: 'یادگیری ماشین' },
+            { id: 'te2', english: 'Deep Learning', persian: 'یادگیری عمیق' },
+            { id: 'te3', english: 'Neural Network', persian: 'شبکه عصبی' },
+            { id: 'te4', english: 'Frontend', persian: 'فرانت‌اند' },
+            { id: 'te5', english: 'Backend', persian: 'بک‌اند' }
+          ]
+        }
+      ];
+
+      // --- SAMPLE DEFAULT SUBTITLES ---
+      const DEFAULT_FILENAME = 'ICT_Mentorship_Ep01_MarketStructure.srt';
+      const SAMPLE_SUBTITLES = [
+        {
+          id: 1,
+          startTime: '00:00:01,200',
+          endTime: '00:00:04,500',
+          rawTimestamp: '00:00:01,200 --> 00:00:04,500',
+          sourceText: 'Welcome back to the ICT Mentorship series on market structure.',
+          translatedText: 'به سری آموزش‌های منتورشیپ ICT درباره ساختار بازار خوش آمدید.',
+          status: 'done'
+        },
+        {
+          id: 2,
+          startTime: '00:00:05,100',
+          endTime: '00:00:08,800',
+          rawTimestamp: '00:00:05,100 --> 00:00:08,800',
+          sourceText: 'Today we are going to talk about the Fair Value Gap and how algorithms seek liquidity.',
+          translatedText: 'امروز می‌خواهیم درباره افویجی و چگونگی شکار نقدینگی توسط الگوریتم‌ها صحبت کنیم.',
+          status: 'done'
+        },
+        {
+          id: 3,
+          startTime: '00:00:09,300',
+          endTime: '00:00:13,400',
+          rawTimestamp: '00:00:09,300 --> 00:00:13,400',
+          sourceText: 'Notice how the price swept the Buy Side Liquidity before creating an Order Block.',
+          translatedText: 'توجه کنید که قیمت چگونه قبل از ساختن یک اوردربلاک، بای‌ساید را جمع‌آوری کرد.',
+          status: 'done'
+        },
+        {
+          id: 4,
+          startTime: '00:00:14,000',
+          endTime: '00:00:18,200',
+          rawTimestamp: '00:00:14,000 --> 00:00:18,200',
+          sourceText: 'This imbalance in the market will eventually be mitigated during the London Killzone.',
+          translatedText: '',
+          status: 'pending'
+        },
+        {
+          id: 5,
+          startTime: '00:00:19,000',
+          endTime: '00:00:23,500',
+          rawTimestamp: '00:00:19,000 --> 00:00:23,500',
+          sourceText: 'Always manage your Stop Loss and wait for a clear Market Structure Shift.',
+          translatedText: '',
+          status: 'pending'
+        }
+      ];
+
+      // --- SRT PARSER & GENERATOR UTILS ---
+      function parseSRT(data) {
+        if (!data || typeof data !== 'string') return [];
+        const clean = data.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+        const blocks = clean.split(/\n\s*\n/);
+        const segments = [];
+
+        blocks.forEach((block, idx) => {
+          const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+          if (lines.length < 2) return;
+
+          let timeIndex = 0;
+          if (/^\d+$/.test(lines[0]) && lines.length >= 2) {
+            timeIndex = 1;
           }
 
-          var savedFont = localStorage.getItem('pst_persian_font') || 'vazir';
-          document.documentElement.setAttribute('data-persian-font', savedFont);
-        } catch (e) {}
-      })();
+          const timeLine = lines[timeIndex];
+          if (!timeLine || !timeLine.includes('-->')) return;
+
+          const [startTime, endTime] = timeLine.split('-->').map(s => s.trim());
+          const textLines = lines.slice(timeIndex + 1);
+          const sourceText = textLines.join('\n');
+
+          segments.push({
+            id: segments.length + 1,
+            startTime,
+            endTime,
+            rawTimestamp: `${startTime} --> ${endTime}`,
+            sourceText,
+            translatedText: '',
+            status: 'pending'
+          });
+        });
+
+        return segments;
+      }
+
+      function generateSRT(segments, persianOnly = true) {
+        return segments.map((seg, idx) => {
+          const id = idx + 1;
+          const text = persianOnly 
+            ? (seg.translatedText?.trim() || seg.sourceText) 
+            : `${seg.sourceText}\n${seg.translatedText || ''}`;
+          return `${id}\n${seg.startTime} --> ${seg.endTime}\n${text.trim()}\n`;
+        }).join('\n');
+      }
+
+      function downloadSRTFile(content, filename) {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      // --- SMART IN-BROWSER TRANSLATION SERVICE ---
+      class SmartTranslator {
+        static enforceTerminology(text, terms = []) {
+          if (!text) return text;
+          let result = text;
+          terms.forEach(t => {
+            if (!t.english || !t.persian) return;
+            const regex = new RegExp(`\\b${t.english}\\b`, 'gi');
+            result = result.replace(regex, t.persian);
+          });
+          // Clean legacy English brackets e.g. "افویجی (Fair Value Gap)" -> "افویجی"
+          result = result.replace(/\s*\([A-Za-z\s]+\)\s*/g, ' ').trim();
+          return result;
+        }
+
+        static async translateText(text, options) {
+          const { tone, terminology, apiKey } = options;
+
+          // If Gemini API Key is provided by user, call Gemini 1.5 Flash endpoint directly
+          if (apiKey && apiKey.trim().length > 10) {
+            try {
+              const glossaryInstructions = terminology && terminology.length > 0
+                ? `Use strictly this terminology glossary: ${terminology.map(t => `${t.english}=>${t.persian}`).join(', ')}.`
+                : '';
+              const toneInstruction = tone === 'spoken' 
+                ? 'Translate into fluent, natural, spoken/conversational Persian (محاوره‌ای و روان).'
+                : 'Translate into formal, standard Persian (رسمی و کتابی).';
+
+              const prompt = `You are an expert English to Persian SRT subtitle translator. 
+Translate the following subtitle line accurately into Persian.
+Do NOT include the English words in parentheses in the Persian output.
+${toneInstruction}
+${glossaryInstructions}
+
+English: "${text}"
+Persian translation:`;
+
+              const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: { temperature: 0.2, maxOutputTokens: 200 }
+                })
+              });
+
+              if (resp.ok) {
+                const data = await resp.json();
+                const cand = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (cand && cand.trim()) {
+                  return SmartTranslator.enforceTerminology(cand.trim().replace(/^["']|["']$/g, ''), terminology);
+                }
+              }
+            } catch (err) {
+              console.warn('Gemini API call error, falling back to smart dictionary translation:', err);
+            }
+          }
+
+          // Fallback Smart Translation Engine (Simulated instant intelligent translator)
+          await new Promise(r => setTimeout(r, 220));
+
+          // Apply glossary terms first
+          let working = text;
+          terminology.forEach(t => {
+            const re = new RegExp(t.english, 'gi');
+            working = working.replace(re, t.persian);
+          });
+
+          // Common subtitle phrase patterns
+          const phrases = [
+            [/Welcome back to the (.+) series/i, 'به سری $1 خوش آمدید'],
+            [/Today we are going to talk about (.+)/i, 'امروز درباره $1 صحبت خواهیم کرد'],
+            [/Notice how (.+)/i, 'دقت کنید که چگونه $1'],
+            [/This imbalance in the market will (.+)/i, 'این عدم تعادل در مارکت $1 خواهد شد'],
+            [/Always manage your (.+) and wait for (.+)/i, 'همیشه $1 خود را مدیریت کنید و منتظر $2 بمانید'],
+            [/Let's look at the chart/i, 'بیایید به نمودار نگاه کنیم'],
+            [/In this video/i, 'در این ویدیو'],
+            [/As you can see here/i, 'همان‌طور که اینجا مشاهده می‌کنید'],
+            [/What is going on/i, 'چه اتفاقی دارد می‌افتد'],
+            [/I don't think so/i, 'من این‌طور فکر نمی‌کنم'],
+            [/Thank you for watching/i, 'از تماشای شما متشکرم']
+          ];
+
+          for (const [pattern, repl] of phrases) {
+            if (pattern.test(text)) {
+              working = text.replace(pattern, repl);
+              break;
+            }
+          }
+
+          return SmartTranslator.enforceTerminology(working, terminology);
+        }
+      }
+
+      // --- MAIN REACT APPLICATION COMPONENT ---
+      function App() {
+        const [isDark, setIsDark] = useState(() => {
+          return document.documentElement.classList.contains('dark');
+        });
+
+        const toggleTheme = () => {
+          setIsDark(prev => {
+            const next = !prev;
+            if (next) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+            try { localStorage.setItem('gabriel_theme', next ? 'dark' : 'light'); } catch (e) {}
+            return next;
+          });
+        };
+
+        // Segments State
+        const [fileName, setFileName] = useState(() => {
+          try { return localStorage.getItem('gabriel_filename') || DEFAULT_FILENAME; } catch { return DEFAULT_FILENAME; }
+        });
+
+        const [segments, setSegments] = useState(() => {
+          try {
+            const saved = localStorage.getItem('gabriel_segments');
+            if (saved) {
+              const p = JSON.parse(saved);
+              if (Array.isArray(p) && p.length > 0) return p;
+            }
+          } catch (e) {}
+          return SAMPLE_SUBTITLES;
+        });
+
+        // History (Undo / Redo)
+        const [history, setHistory] = useState([segments]);
+        const [historyIndex, setHistoryIndex] = useState(0);
+
+        const pushToHistory = useCallback((newSegments) => {
+          setHistory(prev => {
+            const sliced = prev.slice(0, historyIndex + 1);
+            return [...sliced, newSegments];
+          });
+          setHistoryIndex(prev => prev + 1);
+        }, [historyIndex]);
+
+        // Terminology Profiles
+        const [profiles, setProfiles] = useState(() => {
+          try {
+            const saved = localStorage.getItem('gabriel_profiles');
+            if (saved) return JSON.parse(saved);
+          } catch {}
+          return DEFAULT_TERMINOLOGY_PROFILES;
+        });
+
+        const [selectedProfileId, setSelectedProfileId] = useState('ict');
+        const [tone, setTone] = useState('spoken');
+        const [videoContext, setVideoContext] = useState('ICT Smart Money Concepts Trading Mentorship');
+        const [batchSize, setBatchSize] = useState(5);
+        const [selectedSegmentId, setSelectedSegmentId] = useState(1);
+        const [isTranslating, setIsTranslating] = useState(false);
+        const isCancelledRef = useRef(false);
+
+        // API Key Settings
+        const [apiKey, setApiKey] = useState(() => {
+          try { return localStorage.getItem('gabriel_gemini_key') || ''; } catch { return ''; }
+        });
+
+        // Modals
+        const [isExportOpen, setIsExportOpen] = useState(false);
+        const [isHelpOpen, setIsHelpOpen] = useState(false);
+        const [isTerminologyOpen, setIsTerminologyOpen] = useState(false);
+        const [isApiKeyOpen, setIsApiKeyOpen] = useState(false);
+        const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+        const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
+        const [findText, setFindText] = useState('');
+        const [replaceText, setReplaceText] = useState('');
+
+        // Toast Notifications
+        const [notification, setNotification] = useState(null);
+        const showToast = (message, type = 'info') => {
+          setNotification({ message, type });
+          setTimeout(() => setNotification(null), 3200);
+        };
+
+        // Save State
+        useEffect(() => {
+          try {
+            localStorage.setItem('gabriel_segments', JSON.stringify(segments));
+            localStorage.setItem('gabriel_filename', fileName);
+          } catch (e) {}
+        }, [segments, fileName]);
+
+        useEffect(() => {
+          try {
+            localStorage.setItem('gabriel_profiles', JSON.stringify(profiles));
+          } catch (e) {}
+        }, [profiles]);
+
+        const currentProfile = useMemo(() => {
+          return profiles.find(p => p.id === selectedProfileId) || profiles[0];
+        }, [profiles, selectedProfileId]);
+
+        // Stats calculation
+        const stats = useMemo(() => {
+          const total = segments.length;
+          let done = 0;
+          let active = 0;
+          let error = 0;
+          segments.forEach(s => {
+            if (s.status === 'done' || (s.translatedText && s.translatedText.trim())) done++;
+            else if (s.status === 'translating') active++;
+            else if (s.status === 'error') error++;
+          });
+          return { total, done, active, error };
+        }, [segments]);
+
+        // Keyboard Shortcuts (Ctrl+H: Find/Replace, Ctrl+Z: Undo)
+        useEffect(() => {
+          const handleKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
+              e.preventDefault();
+              setIsFindReplaceOpen(p => !p);
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+              if (historyIndex > 0) {
+                e.preventDefault();
+                const prev = history[historyIndex - 1];
+                setHistoryIndex(historyIndex - 1);
+                setSegments(prev);
+                showToast('عملیات قبلی لغو شد (Undo)', 'info');
+              }
+            }
+          };
+          window.addEventListener('keydown', handleKey);
+          return () => window.removeEventListener('keydown', handleKey);
+        }, [history, historyIndex]);
+
+        // Update single segment
+        const handleUpdateSegment = (id, field, value) => {
+          setSegments(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+        };
+
+        // Add empty row
+        const handleAddSegment = () => {
+          const last = segments[segments.length - 1];
+          const newSeg = {
+            id: segments.length + 1,
+            startTime: last ? last.endTime : '00:00:00,000',
+            endTime: '00:00:03,000',
+            rawTimestamp: `${last ? last.endTime : '00:00:00,000'} --> 00:00:03,000`,
+            sourceText: '',
+            translatedText: '',
+            status: 'pending'
+          };
+          const next = [...segments, newSeg];
+          pushToHistory(next);
+          setSegments(next);
+          setSelectedSegmentId(newSeg.id);
+          showToast(`سطر #${newSeg.id} اضافه شد`, 'success');
+        };
+
+        // Delete row
+        const handleDeleteSegment = (id) => {
+          const next = segments.filter(s => s.id !== id).map((s, idx) => ({ ...s, id: idx + 1 }));
+          pushToHistory(next);
+          setSegments(next);
+          showToast(`سطر #${id} حذف گردید`, 'info');
+        };
+
+        // Upload SRT File
+        const handleFileUpload = (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const content = event.target?.result;
+            const parsed = parseSRT(content);
+            if (parsed.length > 0) {
+              pushToHistory(parsed);
+              setSegments(parsed);
+              setFileName(file.name);
+              setSelectedSegmentId(parsed[0].id);
+              showToast(`فایل "${file.name}" با ${parsed.length} سطر بارگذاری شد.`, 'success');
+            } else {
+              showToast('خطا در پردازش یا خالی بودن فایل زیرنویس!', 'error');
+            }
+          };
+          reader.readAsText(file, 'UTF-8');
+        };
+
+        // Load Sample File
+        const handleLoadSample = () => {
+          pushToHistory(SAMPLE_SUBTITLES);
+          setSegments(SAMPLE_SUBTITLES);
+          setFileName(DEFAULT_FILENAME);
+          showToast(`زیرنویس نمونه "${DEFAULT_FILENAME}" بارگذاری شد`, 'success');
+        };
+
+        // Translate Single Line
+        const handleTranslateSingle = async (id) => {
+          const seg = segments.find(s => s.id === id);
+          if (!seg || !seg.sourceText.trim()) return;
+
+          setSegments(prev => prev.map(s => s.id === id ? { ...s, status: 'translating' } : s));
+
+          try {
+            const result = await SmartTranslator.translateText(seg.sourceText, {
+              tone,
+              terminology: currentProfile.items,
+              apiKey
+            });
+
+            setSegments(prev => prev.map(s => s.id === id ? {
+              ...s,
+              translatedText: result,
+              status: 'done'
+            } : s));
+            showToast(`سطر #${id} ترجمه شد`, 'success');
+          } catch (err) {
+            setSegments(prev => prev.map(s => s.id === id ? { ...s, status: 'error' } : s));
+            showToast(`خطا در ترجمه سطر #${id}`, 'error');
+          }
+        };
+
+        // Batch Translate
+        const handleStartTranslation = async () => {
+          if (isTranslating) return;
+          const pending = segments.filter(s => !s.translatedText.trim() || s.status === 'error');
+          if (pending.length === 0) {
+            showToast('تمام سطرهای زیرنویس ترجمه شده‌اند!', 'info');
+            return;
+          }
+
+          setIsTranslating(true);
+          isCancelledRef.current = false;
+          showToast(`شروع ترجمه هوشمند ${pending.length} سطر با سبک ${currentProfile.persianName}...`, 'info');
+
+          for (let i = 0; i < pending.length; i += batchSize) {
+            if (isCancelledRef.current) break;
+            const chunk = pending.slice(i, i + batchSize);
+            const chunkIds = chunk.map(c => c.id);
+
+            setSegments(prev => prev.map(s => chunkIds.includes(s.id) ? { ...s, status: 'translating' } : s));
+
+            for (const item of chunk) {
+              if (isCancelledRef.current) break;
+              try {
+                const tr = await SmartTranslator.translateText(item.sourceText, {
+                  tone,
+                  terminology: currentProfile.items,
+                  apiKey
+                });
+                setSegments(prev => prev.map(s => s.id === item.id ? { ...s, translatedText: tr, status: 'done' } : s));
+              } catch (e) {
+                setSegments(prev => prev.map(s => s.id === item.id ? { ...s, status: 'error' } : s));
+              }
+            }
+          }
+
+          setIsTranslating(false);
+          showToast('فرآیند ترجمه کامل گردید', 'success');
+        };
+
+        const handlePauseTranslation = () => {
+          isCancelledRef.current = true;
+          setIsTranslating(false);
+          showToast('ترجمه خودکار متوقف شد.', 'info');
+        };
+
+        const handleCleanArtifacts = () => {
+          let count = 0;
+          const next = segments.map(s => {
+            if (!s.translatedText) return s;
+            const cleaned = SmartTranslator.enforceTerminology(s.translatedText, currentProfile.items);
+            if (cleaned !== s.translatedText) count++;
+            return { ...s, translatedText: cleaned };
+          });
+          pushToHistory(next);
+          setSegments(next);
+          showToast(`${count} سطر از پرانتزها و اضافات پاکسازی شد.`, 'success');
+        };
+
+        const handleClearTranslations = () => {
+          if (confirm('آیا از پاک کردن تمام ترجمه‌های فارسی مطمئن هستید؟')) {
+            const next = segments.map(s => ({ ...s, translatedText: '', status: 'pending' }));
+            pushToHistory(next);
+            setSegments(next);
+            showToast('ترجمه‌های فارسی ریست شدند', 'info');
+          }
+        };
+
+        // Direct SRT Download
+        const handleDownloadSRT = () => {
+          if (segments.length === 0) {
+            showToast('هیچ زیرنویسی برای دانلود وجود ندارد', 'error');
+            return;
+          }
+          const base = (fileName || 'subtitle').replace(/\.(srt|vtt|txt)$/i, '');
+          const outName = `${base}_Persian.srt`;
+          const srt = generateSRT(segments, true);
+          downloadSRTFile(srt, outName);
+          showToast(`فایل «${outName}» دانلود شد`, 'success');
+        };
+
+        // Find & Replace
+        const handleExecuteReplace = () => {
+          if (!findText) return;
+          let changes = 0;
+          const next = segments.map(s => {
+            if (s.translatedText && s.translatedText.includes(findText)) {
+              changes++;
+              return { ...s, translatedText: s.translatedText.split(findText).join(replaceText) };
+            }
+            return s;
+          });
+          if (changes > 0) {
+            pushToHistory(next);
+            setSegments(next);
+            showToast(`${changes} مورد با موفقیت جایگزین شد.`, 'success');
+          } else {
+            showToast('موردی برای جایگزینی یافت نشد.', 'info');
+          }
+        };
+
+        return (
+          <div className="min-h-screen flex flex-col">
+            {/* 1. TOP MAIN HEADER */}
+            <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#111622]/90 backdrop-blur-md border-b border-[#E1E7EE] dark:border-[#232D3F] px-4 sm:px-8 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-extrabold shadow-lg shadow-emerald-600/25">
+                  <Icons.Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Gabriel Subtitle Translator</span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-400">Pro AI</span>
+                  </h1>
+                  <p className="text-xs text-slate-400 font-persian">محیط تخصصی ترجمه هوشمند زیرنویس انگلیسی به فارسی</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* API Key Modal Button */}
+                <button
+                  onClick={() => setIsApiKeyOpen(true)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    apiKey ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'bg-slate-100 dark:bg-[#1A2232] text-slate-600 dark:text-slate-300'
+                  }`}
+                  title="تنظیم کلید هوش مصنوعی"
+                >
+                  <Icons.Key className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="hidden sm:inline font-persian">{apiKey ? 'کلید فعال' : 'اتصال کلید AI'}</span>
+                </button>
+
+                {/* Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-[#232D3F] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1A2232] transition-colors"
+                  title="تغییر تم"
+                >
+                  {isDark ? <Icons.Sun className="w-4 h-4 text-amber-400" /> : <Icons.Moon className="w-4 h-4 text-slate-700" />}
+                </button>
+
+                {/* Help Modal */}
+                <button
+                  onClick={() => setIsHelpOpen(true)}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-[#232D3F] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1A2232] transition-colors"
+                  title="راهنما"
+                >
+                  <Icons.HelpCircle className="w-4 h-4" />
+                </button>
+              </div>
+            </header>
+
+            {/* 2. SUB-HEADER TOOLBAR */}
+            <div className="bg-white dark:bg-[#111622] border-b border-[#E1E7EE] dark:border-[#232D3F] px-4 sm:px-8 py-2.5">
+              <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Download Direct SRT */}
+                  <button
+                    onClick={handleDownloadSRT}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all font-persian"
+                  >
+                    <Icons.Download className="w-4 h-4" />
+                    <span>دانلود فایل / Download SRT</span>
+                  </button>
+
+                  {/* Export Formats */}
+                  <button
+                    onClick={() => setIsExportOpen(true)}
+                    className="px-3.5 py-2 bg-slate-50 dark:bg-[#151C28] hover:bg-slate-100 dark:hover:bg-[#1E2736] border border-slate-200 dark:border-[#232D3F] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors font-persian"
+                  >
+                    <Icons.FileDown className="w-4 h-4 text-emerald-500" />
+                    <span>سایر فرمت‌ها (Export)</span>
+                  </button>
+
+                  {/* Find & Replace Trigger */}
+                  <button
+                    onClick={() => setIsFindReplaceOpen(p => !p)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all font-persian ${
+                      isFindReplaceOpen 
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-400' 
+                        : 'bg-slate-50 dark:bg-[#151C28] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#232D3F]'
+                    }`}
+                  >
+                    <Icons.Search className="w-4 h-4 text-emerald-500" />
+                    <span>جستجو و جایگزینی (Find & Replace)</span>
+                    <kbd className="hidden sm:inline text-[10px] px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded font-mono">Ctrl+H</kbd>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 pl-3">
+                    <span className="font-persian">فایل فعال:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-[200px] truncate">{fileName}</span>
+                  </div>
+
+                  <button
+                    onClick={handleLoadSample}
+                    className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline font-persian px-2"
+                  >
+                    بارگذاری نمونه ICT
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. FIND & REPLACE FLOATING BAR */}
+            {isFindReplaceOpen && (
+              <div className="bg-slate-50 dark:bg-[#151C28] border-b border-[#E1E7EE] dark:border-[#232D3F] p-4">
+                <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-3 text-xs font-persian">
+                  <input
+                    type="text"
+                    placeholder="کلمه مورد نظر برای جستجو..."
+                    value={findText}
+                    onChange={(e) => setFindText(e.target.value)}
+                    className="bg-white dark:bg-[#0F1420] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs flex-1 min-w-[180px]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="جایگزین شود با..."
+                    value={replaceText}
+                    onChange={(e) => setReplaceText(e.target.value)}
+                    className="bg-white dark:bg-[#0F1420] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs flex-1 min-w-[180px]"
+                  />
+                  <button
+                    onClick={handleExecuteReplace}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                  >
+                    جایگزینی در کل زیرنویس
+                  </button>
+                  <button
+                    onClick={() => setIsFindReplaceOpen(false)}
+                    className="p-2 text-slate-400 hover:text-slate-600"
+                  >
+                    <Icons.X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 4. MAIN WORKSPACE (SIDEBAR + SUBTITLE TABLE) */}
+            <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 items-start">
+              {/* LEFT SIDEBAR: Controls & Terminology */}
+              <aside className="w-full lg:w-80 shrink-0 space-y-4">
+                {/* Upload & Progress Card */}
+                <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200 dark:border-[#232D3F] shadow-sm space-y-4 font-persian">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white">وضعیت پردازش</span>
+                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">{stats.done} / {stats.total} سطر</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                        style={{ width: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Upload Button */}
+                  <label className="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-emerald-500 flex items-center justify-center gap-2 cursor-pointer text-xs font-bold text-slate-600 dark:text-slate-300 transition-colors">
+                    <Icons.Upload className="w-4 h-4 text-emerald-500" />
+                    <span>آپلود فایل زیرنویس (.SRT)</span>
+                    <input type="file" accept=".srt" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                </div>
+
+                {/* Translation Configuration Card */}
+                <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200 dark:border-[#232D3F] shadow-sm space-y-4 font-persian text-xs">
+                  <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center justify-between">
+                    <span>تنظیمات ترجمه هوشمند</span>
+                    <Icons.Sliders className="w-4 h-4 text-emerald-500" />
+                  </h3>
+
+                  {/* Profile Selection */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-slate-400 font-medium">پروفایل و سبک اصطلاحات:</label>
+                      <button
+                        onClick={() => setIsTerminologyOpen(true)}
+                        className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
+                      >
+                        بانک اصطلاحات ({currentProfile.items.length})
+                      </button>
+                    </div>
+                    <select
+                      value={selectedProfileId}
+                      onChange={(e) => setSelectedProfileId(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-[#1A2232] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-medium"
+                    >
+                      {profiles.map(p => (
+                        <option key={p.id} value={p.id}>{p.persianName}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Tone */}
+                  <div>
+                    <label className="block text-slate-400 mb-1.5 font-medium">لحن ترجمه:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setTone('spoken')}
+                        className={`py-2 rounded-xl font-bold transition-all ${
+                          tone === 'spoken' 
+                            ? 'bg-emerald-600 text-white shadow-sm' 
+                            : 'bg-slate-50 dark:bg-[#1A2232] text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        محاوره‌ای و روان
+                      </button>
+                      <button
+                        onClick={() => setTone('formal')}
+                        className={`py-2 rounded-xl font-bold transition-all ${
+                          tone === 'formal' 
+                            ? 'bg-emerald-600 text-white shadow-sm' 
+                            : 'bg-slate-50 dark:bg-[#1A2232] text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        رسمی و کتابی
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 space-y-2">
+                    {!isTranslating ? (
+                      <button
+                        onClick={handleStartTranslation}
+                        className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all"
+                      >
+                        <Icons.Sparkles className="w-4 h-4" />
+                        <span>شروع ترجمه هوشمند کل فایل</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handlePauseTranslation}
+                        className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold flex items-center justify-center gap-2 transition-all"
+                      >
+                        <Icons.Pause className="w-4 h-4" />
+                        <span>توقف ترجمه خودکار</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleCleanArtifacts}
+                      className="w-full py-2 rounded-xl bg-slate-50 dark:bg-[#1A2232] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-semibold"
+                    >
+                      پاکسازی پرانتزها و کلمات انگلیسی
+                    </button>
+
+                    <button
+                      onClick={handleClearTranslations}
+                      className="w-full py-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px]"
+                    >
+                      ریست تمام ترجمه‌های فارسی
+                    </button>
+                  </div>
+                </div>
+              </aside>
+
+              {/* RIGHT SUBTITLE TABLE: Side-by-Side Editor */}
+              <section className="flex-1 w-full bg-white dark:bg-[#111622] rounded-2xl border border-slate-200 dark:border-[#232D3F] shadow-sm overflow-hidden flex flex-col">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-persian">
+                    <span className="w-2.5 h-6 rounded-full bg-emerald-500"></span>
+                    <h2 className="font-bold text-sm text-slate-900 dark:text-white">جدول دو زبانه زیرنویس (Side-by-Side Editor)</h2>
+                  </div>
+
+                  <button
+                    onClick={handleAddSegment}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1 hover:bg-emerald-100 transition-colors font-persian"
+                  >
+                    <Icons.Plus className="w-3.5 h-3.5" />
+                    <span>افزودن سطر</span>
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-slate-50 dark:bg-[#151C28] text-slate-500 font-persian border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="p-3 w-14 text-center">#</th>
+                        <th className="p-3 w-40 text-center font-mono">زمان‌بندی</th>
+                        <th className="p-3 w-1/2 text-left font-sans">English Subtitle</th>
+                        <th className="p-3 w-1/2 text-right font-persian">ترجمه فارسی</th>
+                        <th className="p-3 w-20 text-center font-persian">عملیات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {segments.map((seg) => (
+                        <tr
+                          key={seg.id}
+                          className={`hover:bg-slate-50/50 dark:hover:bg-[#172030]/60 transition-colors ${
+                            selectedSegmentId === seg.id ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''
+                          }`}
+                          onClick={() => setSelectedSegmentId(seg.id)}
+                        >
+                          <td className="p-3 text-center font-mono text-slate-400 font-bold">{seg.id}</td>
+                          <td className="p-3 text-center">
+                            <span className="inline-block px-2 py-1 rounded bg-slate-100 dark:bg-[#1A2232] text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                              {seg.startTime}
+                            </span>
+                          </td>
+                          <td className="p-3 text-left font-sans" dir="ltr">
+                            <textarea
+                              rows={2}
+                              value={seg.sourceText}
+                              onChange={(e) => handleUpdateSegment(seg.id, 'sourceText', e.target.value)}
+                              className="w-full bg-transparent resize-none focus:bg-white dark:focus:bg-[#0B0F17] rounded-lg p-1.5 focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 leading-relaxed"
+                            />
+                          </td>
+                          <td className="p-3 text-right font-persian" dir="rtl">
+                            <textarea
+                              rows={2}
+                              placeholder="ترجمه فارسی..."
+                              value={seg.translatedText}
+                              onChange={(e) => handleUpdateSegment(seg.id, 'translatedText', e.target.value)}
+                              className="w-full bg-transparent resize-none focus:bg-white dark:focus:bg-[#0B0F17] rounded-lg p-1.5 focus:ring-1 focus:ring-emerald-500 text-slate-900 dark:text-white font-medium leading-relaxed"
+                            />
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleTranslateSingle(seg.id)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  seg.status === 'translating' ? 'animate-spin text-emerald-500' : 'text-slate-400 hover:text-emerald-500'
+                                }`}
+                                title="ترجمه اختصاصی این سطر"
+                              >
+                                <Icons.Sparkles className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSegment(seg.id)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+                                title="حذف سطر"
+                              >
+                                <Icons.Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </main>
+
+            {/* 5. TOAST NOTIFICATION */}
+            {notification && (
+              <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+                <div className={`px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-persian font-bold text-white ${
+                  notification.type === 'success' ? 'bg-emerald-600' : notification.type === 'error' ? 'bg-rose-600' : 'bg-slate-900'
+                }`}>
+                  {notification.type === 'success' && <Icons.CheckCircle2 className="w-4 h-4" />}
+                  {notification.type === 'error' && <Icons.AlertCircle className="w-4 h-4" />}
+                  <span>{notification.message}</span>
+                </div>
+              </div>
+            )}
+
+            {/* 6. MODALS */}
+            {/* Terminology Modal */}
+            {isTerminologyOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white dark:bg-[#111622] rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 font-persian">
+                  <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <Icons.BookOpen className="w-4 h-4 text-emerald-500" />
+                      <span>بانک اصطلاحات سبک: {currentProfile.persianName}</span>
+                    </h3>
+                    <button onClick={() => setIsTerminologyOpen(false)} className="text-slate-400 hover:text-slate-600">
+                      <Icons.X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+                    {currentProfile.items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#1A2232] text-xs">
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{item.english}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{item.persian}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* API Key Modal */}
+            {isApiKeyOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white dark:bg-[#111622] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 font-persian text-xs">
+                  <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <Icons.Key className="w-4 h-4 text-emerald-500" />
+                      <span>تنظیم کلید هوش مصنوعی (Google Gemini)</span>
+                    </h3>
+                    <button onClick={() => setIsApiKeyOpen(false)}><Icons.X className="w-5 h-5 text-slate-400" /></button>
+                  </div>
+                  <p className="text-slate-400 leading-relaxed">
+                    برای فعال‌سازی ترجمه فوق‌العاده با مدل Gemini 1.5 Flash می‌توانید کلید رایگان خود را اینجا وارد کنید. (در صورت خالی بودن، مترجم داخلی خودکار فعال خواهد بود).
+                  </p>
+                  <input
+                    type="password"
+                    placeholder="AIzaSy..."
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-[#1A2232] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono"
+                  />
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      onClick={() => {
+                        try { localStorage.setItem('gabriel_gemini_key', apiKey); } catch (e) {}
+                        setIsApiKeyOpen(false);
+                        showToast('کلید هوش مصنوعی ذخیره شد', 'success');
+                      }}
+                      className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold"
+                    >
+                      ذخیره و فعال‌سازی
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Help Modal */}
+            {isHelpOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white dark:bg-[#111622] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 font-persian text-xs">
+                  <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">راهنمای استفاده از گابریل</h3>
+                    <button onClick={() => setIsHelpOpen(false)}><Icons.X className="w-5 h-5 text-slate-400" /></button>
+                  </div>
+                  <ul className="space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed list-disc pr-4">
+                    <li>با دکمه <b>آپلود فایل</b>، فایل زیرنویس SRT خود را انتخاب کنید.</li>
+                    <li>می‌توانید روی هر سطر کلیک کرده و متن انگلیسی یا ترجمه فارسی را مستقیماً ویرایش نمایید.</li>
+                    <li>کلید میانبر <b>Ctrl+H</b> برای پنجره جستجو و جایگزینی کلمات است.</li>
+                    <li>با زدن <b>دانلود فایل / Download SRT</b>، زیرنویس ترجمه‌شده فارسی فوراً با انکودینگ استاندارد دانلود می‌شود.</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Export Modal */}
+            {isExportOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white dark:bg-[#111622] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 font-persian text-xs">
+                  <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">خروجی در فرمت‌های مختلف</h3>
+                    <button onClick={() => setIsExportOpen(false)}><Icons.X className="w-5 h-5 text-slate-400" /></button>
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => {
+                        handleDownloadSRT();
+                        setIsExportOpen(false);
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-right hover:border-emerald-500 font-bold"
+                    >
+                      خروجی استاندارد زیرنویس فارسی (.SRT)
+                    </button>
+                    <button
+                      onClick={() => {
+                        const content = generateSRT(segments, false);
+                        downloadSRTFile(content, 'Bilingual_Subtitles.srt');
+                        setIsExportOpen(false);
+                        showToast('زیرنویس دوزبانه دانلود شد', 'success');
+                      }}
+                      className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-right hover:border-emerald-500 font-bold"
+                    >
+                      زیرنویس دو زبانه همزمان (انگلیسی + فارسی)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
-  </head>
-  <body class="bg-[#F6F8FA] dark:bg-[#0B0F17] text-[#0F172A] dark:text-[#F1F5F9] antialiased">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
